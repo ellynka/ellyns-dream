@@ -18,6 +18,9 @@ button{border:0;background:none;color:inherit;font:inherit;cursor:pointer}.add{w
 .modal{position:fixed;inset:0;background:#4b343855;display:none;align-items:flex-end;z-index:5}.modal.show{display:flex}.sheet{background:#fff8f8;width:100%;max-height:92vh;overflow:auto;border-radius:28px 28px 0 0;padding:22px 18px calc(28px + env(safe-area-inset-bottom));}.sheet h2{font-family:Georgia,serif;font-weight:400;margin:0 0 16px;font-size:27px}.field{margin:10px 0}.field label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px}.field input,.field textarea{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff;font:inherit;outline:none}.field textarea{min-height:120px;resize:vertical}.row{display:flex;gap:10px}.row>*{flex:1}.save{width:100%;background:var(--pink);color:white;border-radius:16px;padding:14px;margin-top:10px}.cancel{width:100%;padding:12px;color:var(--muted)}
 .nav{display:flex;gap:8px;margin-bottom:14px}.nav button{padding:8px 13px;border-radius:12px;color:var(--muted)}.nav button.active{background:#fff;color:var(--pink)}
 .empty{text-align:center;color:var(--muted);padding:60px 20px;font-family:Georgia,serif;font-size:20px}
+
+select{width:100%;box-sizing:border-box;border:1px solid rgba(120,80,90,.14);background:#fffafa;border-radius:14px;padding:12px 14px;font:inherit;color:#49383f;outline:none}
+select:focus{border-color:#cda7b3;box-shadow:0 0 0 3px rgba(205,167,179,.15)}
 </style>
     <link rel="apple-touch-icon" href="icon-180.png">
 </head>
@@ -34,6 +37,16 @@ button{border:0;background:none;color:inherit;font:inherit;cursor:pointer}.add{w
 <h2>Новая задача</h2>
 <div class="field"><label>Название</label><input id="title" placeholder="Например: Бассейн"></div>
 <div class="row"><div class="field"><label>Дата</label><input id="taskDate" type="date"></div><div class="field"><label>Время</label><input id="taskTime" type="time"></div></div>
+<div class="field"><label>Повторять</label>
+<select id="repeat">
+  <option value="none">Не повторять</option>
+  <option value="daily">Каждый день</option>
+  <option value="weekly">Каждую неделю</option>
+  <option value="weekdays">Каждый будний день (пн–пт)</option>
+  <option value="monthly">Каждый месяц</option>
+  <option value="yearly">Каждый год</option>
+</select>
+</div>
 <div class="field"><label>Свободный текст</label><textarea id="note" placeholder="Мысли, план, инструкция, всё что захочешь…"></textarea></div>
 <div class="field"><label>Ссылка</label><input id="link" type="url" placeholder="https://…"></div>
 <div class="field"><label>Картинка</label><input id="image" type="file" accept="image/*"></div>
@@ -41,15 +54,41 @@ button{border:0;background:none;color:inherit;font:inherit;cursor:pointer}.add{w
 </div></div>
 
 <script>
-const KEY="ellyns-dream-tasks-v1";let tasks=JSON.parse(localStorage.getItem(KEY)||"[]");let selected=new Date();let imageData="";
+const KEY="ellyns-dream-tasks-v1";
+const $=id=>document.getElementById(id);
+const add=$("add"), cancel=$("cancel"), modal=$("modal"), taskDate=$("taskDate"), taskTime=$("taskTime"), title=$("title"), note=$("note"), link=$("link"), image=$("image"), saveBtn=$("save"), repeat=$("repeat"), quick=$("quick"), quickAdd=$("quickAdd"), dateLabel=$("dateLabel"), strip=$("strip"), list=$("list"), dayTab=$("dayTab"), calTab=$("calTab");
+let tasks=JSON.parse(localStorage.getItem(KEY)||"[]");let selected=new Date();let imageData="";
+const uid=()=> (window.crypto&&window.crypto.randomUUID)?window.crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);
 const pad=n=>String(n).padStart(2,"0"), iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const fmt=d=>d.toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long"});
-function save(){localStorage.setItem(KEY,JSON.stringify(tasks))}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(tasks));return true}
+  catch(e){console.error(e);alert("Не удалось сохранить запись. Проверь свободное место в Safari.");return false}
+}
+function dayDiff(a,b){
+  const x=new Date(a.getFullYear(),a.getMonth(),a.getDate());
+  const y=new Date(b.getFullYear(),b.getMonth(),b.getDate());
+  return Math.round((y-x)/86400000);
+}
+function occursOn(t,d){
+  if(!t.date) return false;
+  const start=new Date(t.date+"T12:00:00");
+  const diff=dayDiff(start,d);
+  if(diff<0) return false;
+  const rule=t.repeat||"none";
+  if(rule==="none") return diff===0;
+  if(rule==="daily") return true;
+  if(rule==="weekdays") return d.getDay()>=1 && d.getDay()<=5;
+  if(rule==="weekly") return diff%7===0;
+  if(rule==="monthly") return d.getDate()===start.getDate();
+  if(rule==="yearly") return d.getMonth()===start.getMonth() && d.getDate()===start.getDate();
+  return false;
+}
 function render(){
  dateLabel.textContent=fmt(selected).replace(/^./,c=>c.toUpperCase());
  strip.innerHTML="";
  for(let i=-2;i<=2;i++){let d=new Date(selected);d.setDate(d.getDate()+i);let b=document.createElement("button");b.className="day"+(i===0?" active":"");b.innerHTML=`${d.toLocaleDateString("ru-RU",{weekday:"short"}).replace(".","")}<strong>${d.getDate()}</strong>`;b.onclick=()=>{selected=d;render()};strip.appendChild(b)}
- let arr=tasks.filter(t=>t.date===iso(selected)).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+ let arr=tasks.filter(t=>occursOn(t, selected)).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
  list.innerHTML=arr.length?arr.map(t=>`<article class="task ${t.done?"done":""}">
  <div class="time">${t.time||""}</div><div class="dot"></div><div class="body"><div class="title">${esc(t.title)}</div>
  ${t.note?`<div class="note">${esc(t.note)}</div>`:""}${t.image?`<img class="photo" src="${t.image}">`:""}
@@ -59,15 +98,25 @@ function render(){
 function esc(x){return String(x).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 function safe(x){let u=x.trim();if(!/^https?:\/\//i.test(u))u="https://"+u;try{let z=new URL(u);return ["http:","https:"].includes(z.protocol)?z.href:"#"}catch{return "#"}}
 function toggle(id){let t=tasks.find(x=>x.id===id);if(t)t.done=!t.done;save();render()}
-function openModal(){modal.classList.add("show");taskDate.value=iso(selected);taskTime.value="";title.value="";note.value="";link.value="";image.value="";imageData=""}
+function openModal(){modal.classList.add("show");taskDate.value=iso(selected);taskTime.value="";title.value="";note.value="";link.value="";repeat.value="none";image.value="";imageData=""}
 add.onclick=openModal;cancel.onclick=()=>modal.classList.remove("show");modal.onclick=e=>{if(e.target===modal)modal.classList.remove("show")}
 image.onchange=()=>{let f=image.files[0];if(!f)return;let r=new FileReader();r.onload=()=>imageData=r.result;r.readAsDataURL(f)}
-save.onclick=()=>{if(!title.value.trim())return;let t={id:crypto.randomUUID(),title:title.value.trim(),date:taskDate.value,time:taskTime.value,note:note.value,link:link.value,image:imageData,done:false};tasks.push(t);save();selected=new Date(taskDate.value+"T12:00");modal.classList.remove("show");render()}
-quickAdd.onclick=()=>{let v=quick.value.trim();if(!v)return;let m=v.match(/(?:^|\s)(\d{1,2}):(\d{2})(?:\s|$)/);let time=m?`${pad(+m[1])}:${m[2]}`:"";if(m)v=v.replace(m[0]," ").trim();tasks.push({id:crypto.randomUUID(),title:v,date:iso(selected),time,note:"",link:"",image:"",done:false});quick.value="";save();render()}
+saveBtn.onclick=()=>{
+  const taskTitle=title.value.trim();
+  if(!taskTitle){alert("Напиши название записи ❤️");title.focus();return}
+  const taskDay=taskDate.value||iso(new Date());
+  const t={id:uid(),title:taskTitle,date:taskDay,time:taskTime.value||"",repeat:repeat.value||"none",note:note.value||"",link:link.value||"",image:imageData||"",done:false};
+  tasks.push(t);
+  if(!save()){tasks.pop();return}
+  selected=new Date(taskDay+"T12:00:00");
+  modal.classList.remove("show");
+  render();
+}
+quickAdd.onclick=()=>{let v=quick.value.trim();if(!v)return;let m=v.match(/(?:^|\s)(\d{1,2}):(\d{2})(?:\s|$)/);let time=m?`${pad(+m[1])}:${m[2]}`:"";if(m)v=v.replace(m[0]," ").trim();tasks.push({id:uid(),title:v,date:iso(selected),time,repeat:"none",note:"",link:"",image:"",done:false});quick.value="";save();render()}
 quick.onkeydown=e=>{if(e.key==="Enter")quickAdd.click()}
 dayTab.onclick=()=>{dayTab.classList.add("active");calTab.classList.remove("active");render()}
 calTab.onclick=()=>{calTab.classList.add("active");dayTab.classList.remove("active");let d=prompt("Выбери дату (ГГГГ-ММ-ДД)",iso(selected));if(d&&/^\d{4}-\d{2}-\d{2}$/.test(d)){selected=new Date(d+"T12:00");render()}}
-if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js?v=5").catch(()=>{});
 render();
 </script>
 </body>
