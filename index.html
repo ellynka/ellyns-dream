@@ -21,6 +21,19 @@ button{border:0;background:none;color:inherit;font:inherit;cursor:pointer}.add{w
 
 select{width:100%;box-sizing:border-box;border:1px solid rgba(120,80,90,.14);background:#fffafa;border-radius:14px;padding:12px 14px;font:inherit;color:#49383f;outline:none}
 select:focus{border-color:#cda7b3;box-shadow:0 0 0 3px rgba(205,167,179,.15)}
+
+.edit-task{margin-left:auto;border:0;background:rgba(255,255,255,.7);width:36px;height:36px;border-radius:12px;font-size:18px;color:#8d6573;cursor:pointer}
+.edit-task:active{transform:scale(.96)}
+.modal{position:fixed;inset:0;background:rgba(55,35,42,.28);backdrop-filter:blur(5px);display:none;align-items:flex-end;z-index:9999}
+.modal.show{display:flex}
+.modal-sheet{width:100%;max-height:88vh;overflow:auto;background:#fffaf9;border-radius:26px 26px 0 0;padding:20px;box-sizing:border-box;box-shadow:0 -12px 40px rgba(80,50,60,.18)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;font-size:20px}
+.icon-btn{border:0;background:#f4e8eb;width:36px;height:36px;border-radius:12px;font-size:24px;color:#7d5966}
+.edit-actions{display:flex;gap:10px;margin-top:18px}
+.edit-actions button{flex:1;border:0;border-radius:14px;padding:13px 16px;font:inherit;font-weight:600}
+.primary-btn{background:#c99eac;color:white}
+.danger-btn{background:#f4e1e4;color:#9a5360}
+
 </style>
     <link rel="apple-touch-icon" href="icon-180.png">
 </head>
@@ -118,6 +131,94 @@ dayTab.onclick=()=>{dayTab.classList.add("active");calTab.classList.remove("acti
 calTab.onclick=()=>{calTab.classList.add("active");dayTab.classList.remove("active");let d=prompt("Выбери дату (ГГГГ-ММ-ДД)",iso(selected));if(d&&/^\d{4}-\d{2}-\d{2}$/.test(d)){selected=new Date(d+"T12:00");render()}}
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js?v=5").catch(()=>{});
 render();
+
+let editingTaskId=null;
+const editModal=$("editModal"), editTitle=$("editTitle"), editDate=$("editDate"),
+      editTime=$("editTime"), editRepeat=$("editRepeat"), editNote=$("editNote"),
+      editLink=$("editLink"), closeEdit=$("closeEdit"), saveEdit=$("saveEdit"),
+      deleteEdit=$("deleteEdit");
+
+function openEditTask(id){
+  const t=tasks.find(x=>String(x.id)===String(id));
+  if(!t) return;
+  editingTaskId=t.id;
+  editTitle.value=t.title||"";
+  editDate.value=t.date||"";
+  editTime.value=t.time||"";
+  editRepeat.value=t.repeat||"none";
+  editNote.value=t.note||"";
+  editLink.value=t.link||"";
+  editModal.classList.add("show");
+  editModal.setAttribute("aria-hidden","false");
+}
+function closeEditTask(){
+  editingTaskId=null;
+  editModal.classList.remove("show");
+  editModal.setAttribute("aria-hidden","true");
+}
+document.addEventListener("click", e=>{
+  const b=e.target.closest("[data-edit-task]");
+  if(b){ e.preventDefault(); e.stopPropagation(); openEditTask(b.dataset.editTask); }
+});
+closeEdit.onclick=closeEditTask;
+editModal.addEventListener("click", e=>{ if(e.target===editModal) closeEditTask(); });
+
+saveEdit.onclick=()=>{
+  const t=tasks.find(x=>String(x.id)===String(editingTaskId));
+  if(!t) return;
+  const title=editTitle.value.trim();
+  if(!title){ alert("Напиши название задачи"); editTitle.focus(); return; }
+  t.title=title;
+  t.date=editDate.value||t.date||"";
+  t.time=editTime.value||"";
+  t.repeat=editRepeat.value||"none";
+  t.note=editNote.value||"";
+  t.link=editLink.value||"";
+  save();
+  closeEditTask();
+  render();
+};
+
+deleteEdit.onclick=()=>{
+  const t=tasks.find(x=>String(x.id)===String(editingTaskId));
+  if(!t) return;
+  if(confirm("Удалить эту задачу?")){
+    tasks=tasks.filter(x=>String(x.id)!==String(editingTaskId));
+    save();
+    closeEditTask();
+    render();
+  }
+};
+
 </script>
+
+<div id="editModal" class="modal" aria-hidden="true">
+  <div class="modal-sheet">
+    <div class="modal-head">
+      <strong>Редактировать</strong>
+      <button type="button" id="closeEdit" class="icon-btn" aria-label="Закрыть">×</button>
+    </div>
+    <div class="field"><label>Название</label><input id="editTitle" type="text"></div>
+    <div class="field"><label>Дата</label><input id="editDate" type="date"></div>
+    <div class="field"><label>Время</label><input id="editTime" type="time"></div>
+    <div class="field"><label>Повторять</label>
+      <select id="editRepeat">
+        <option value="none">Не повторять</option>
+        <option value="daily">Каждый день</option>
+        <option value="weekly">Каждую неделю</option>
+        <option value="weekdays">Каждый будний день (пн–пт)</option>
+        <option value="monthly">Каждый месяц</option>
+        <option value="yearly">Каждый год</option>
+      </select>
+    </div>
+    <div class="field"><label>Заметка</label><textarea id="editNote" rows="4"></textarea></div>
+    <div class="field"><label>Ссылка</label><input id="editLink" type="url" placeholder="https://..."></div>
+    <div class="edit-actions">
+      <button type="button" id="deleteEdit" class="danger-btn">Удалить</button>
+      <button type="button" id="saveEdit" class="primary-btn">Сохранить</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
