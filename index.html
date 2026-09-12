@@ -57,16 +57,16 @@ function render(){
  <button class="check" onclick="toggle('${t.id}')">${t.done?"✓":"○"}</button></article>`).join(""):`<div class="empty">Сегодня — для тебя ✨<br><small>Добавь первую задачу</small></div>`;
 }
 function esc(x){return String(x).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-function safe(x){let u=x.trim();if(!/^https?:\\/\\//i.test(u))u="https://"+u;try{let z=new URL(u);return ["http:","https:"].includes(z.protocol)?z.href:"#"}catch{return "#"}}
+function safe(x){let u=x.trim();if(!/^https?:\/\//i.test(u))u="https://"+u;try{let z=new URL(u);return ["http:","https:"].includes(z.protocol)?z.href:"#"}catch{return "#"}}
 function toggle(id){let t=tasks.find(x=>x.id===id);if(t)t.done=!t.done;save();render()}
 function openModal(){modal.classList.add("show");taskDate.value=iso(selected);taskTime.value="";title.value="";note.value="";link.value="";image.value="";imageData=""}
 add.onclick=openModal;cancel.onclick=()=>modal.classList.remove("show");modal.onclick=e=>{if(e.target===modal)modal.classList.remove("show")}
 image.onchange=()=>{let f=image.files[0];if(!f)return;let r=new FileReader();r.onload=()=>imageData=r.result;r.readAsDataURL(f)}
 save.onclick=()=>{if(!title.value.trim())return;let t={id:crypto.randomUUID(),title:title.value.trim(),date:taskDate.value,time:taskTime.value,note:note.value,link:link.value,image:imageData,done:false};tasks.push(t);save();selected=new Date(taskDate.value+"T12:00");modal.classList.remove("show");render()}
-quickAdd.onclick=()=>{let v=quick.value.trim();if(!v)return;let m=v.match(/(?:^|\\s)(\\d{1,2}):(\\d{2})(?:\\s|$)/);let time=m?`${pad(+m[1])}:${m[2]}`:"";if(m)v=v.replace(m[0]," ").trim();tasks.push({id:crypto.randomUUID(),title:v,date:iso(selected),time,note:"",link:"",image:"",done:false});quick.value="";save();render()}
+quickAdd.onclick=()=>{let v=quick.value.trim();if(!v)return;let m=v.match(/(?:^|\s)(\d{1,2}):(\d{2})(?:\s|$)/);let time=m?`${pad(+m[1])}:${m[2]}`:"";if(m)v=v.replace(m[0]," ").trim();tasks.push({id:crypto.randomUUID(),title:v,date:iso(selected),time,note:"",link:"",image:"",done:false});quick.value="";save();render()}
 quick.onkeydown=e=>{if(e.key==="Enter")quickAdd.click()}
 dayTab.onclick=()=>{dayTab.classList.add("active");calTab.classList.remove("active");render()}
-calTab.onclick=()=>{calTab.classList.add("active");dayTab.classList.remove("active");let d=prompt("Выбери дату (ГГГГ-ММ-ДД)",iso(selected));if(d&&/^\\d{4}-\\d{2}-\\d{2}$/.test(d)){selected=new Date(d+"T12:00");render()}}
+calTab.onclick=()=>{calTab.classList.add("active");dayTab.classList.remove("active");let d=prompt("Выбери дату (ГГГГ-ММ-ДД)",iso(selected));if(d&&/^\d{4}-\d{2}-\d{2}$/.test(d)){selected=new Date(d+"T12:00");render()}}
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 render();
 </script>
