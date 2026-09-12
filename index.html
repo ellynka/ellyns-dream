@@ -34,7 +34,7 @@ select:focus{border-color:#cda7b3;box-shadow:0 0 0 3px rgba(205,167,179,.15)}
 .primary-btn{background:#c99eac;color:white}
 .danger-btn{background:#f4e1e4;color:#9a5360}
 
-</style>
+.task-actions{margin-left:auto;display:flex;align-items:center;gap:7px}.edit-task{border:0;background:rgba(255,255,255,.75);width:36px;height:36px;border-radius:12px;font-size:18px;color:#8d6573;cursor:pointer}.edit-task:active{transform:scale(.96)}</style>
     <link rel="apple-touch-icon" href="icon-180.png">
 </head>
 <body>
@@ -106,7 +106,7 @@ function render(){
  <div class="time">${t.time||""}</div><div class="dot"></div><div class="body"><div class="title">${esc(t.title)}</div>
  ${t.note?`<div class="note">${esc(t.note)}</div>`:""}${t.image?`<img class="photo" src="${t.image}">`:""}
  ${t.link?`<a class="link" href="${safe(t.link)}" target="_blank" rel="noopener">↗ Открыть ссылку</a>`:""}</div>
- <button class="check" onclick="toggle('${t.id}')">${t.done?"✓":"○"}</button></article>`).join(""):`<div class="empty">Сегодня — для тебя ✨<br><small>Добавь первую задачу</small></div>`;
+ <div class="task-actions"><button class="edit-task" type="button" data-edit-task="${t.id}" aria-label="Редактировать">✎</button><button class="check" onclick="toggle('${t.id}')">${t.done?"✓":"○"}</button></div></article>`).join(""):`<div class="empty">Сегодня — для тебя ✨<br><small>Добавь первую задачу</small></div>`;
 }
 function esc(x){return String(x).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 function safe(x){let u=x.trim();if(!/^https?:\/\//i.test(u))u="https://"+u;try{let z=new URL(u);return ["http:","https:"].includes(z.protocol)?z.href:"#"}catch{return "#"}}
@@ -129,7 +129,7 @@ quickAdd.onclick=()=>{let v=quick.value.trim();if(!v)return;let m=v.match(/(?:^|
 quick.onkeydown=e=>{if(e.key==="Enter")quickAdd.click()}
 dayTab.onclick=()=>{dayTab.classList.add("active");calTab.classList.remove("active");render()}
 calTab.onclick=()=>{calTab.classList.add("active");dayTab.classList.remove("active");let d=prompt("Выбери дату (ГГГГ-ММ-ДД)",iso(selected));if(d&&/^\d{4}-\d{2}-\d{2}$/.test(d)){selected=new Date(d+"T12:00");render()}}
-if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js?v=5").catch(()=>{});
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js?v=6").catch(()=>{});
 render();
 
 let editingTaskId=null;
