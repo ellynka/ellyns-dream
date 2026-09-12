@@ -1,0 +1,9 @@
+{
+  "name":"Ellyn’s dream",
+  "short_name":"Ellyn’s dream",
+  "start_url":".",
+  "display":"standalone",
+  "background_color":"#fbf0f1",
+  "theme_color":"#f7dfe3",
+  "icons":[]
+}
